@@ -2,6 +2,17 @@
 
 VirtualEdge OS is a Buildroot-based ARM64 Linux system for edge device monitoring and recovery. It boots to a console and serves a local dashboard with Linux system metrics, sensor readings, and diagnostic events. The QEMU build uses simulated temperature, vibration, and voltage alongside measured guest metrics.
 
+## Screenshots
+
+The live QEMU dashboard displays simulated temperature, vibration, and voltage alongside measured ARM64 guest metrics.
+
+![VirtualEdge OS dashboard with live sensor charts](docs/screenshots/virtualedge-dashboard.jpg)
+
+The diagnostics panel shows system metrics, fault status, and recent events.
+
+![ARM64 system metrics and fault diagnostics](docs/screenshots/virtualedge-diagnostics.jpg)
+
+
 ## What has been verified
 
 - Clean ARM64 build and QEMU boot with guest service, API, and dashboard self-tests.
