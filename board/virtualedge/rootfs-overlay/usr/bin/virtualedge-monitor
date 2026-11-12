@@ -1,0 +1,30 @@
+#!/bin/sh
+
+STATUS=/run/virtualedge/status.json
+
+mkdir -p /run/virtualedge
+
+echo "VirtualEdge system monitor started"
+
+while true; do
+    UPTIME=$(cut -d. -f1 /proc/uptime | awk '{print $1}')
+    MEM_TOTAL=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)
+    MEM_AVAILABLE=$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)
+    LOAD=$(cut -d' ' -f1 /proc/loadavg)
+    TIMESTAMP=$(date +%s)
+
+    cat > "${STATUS}.tmp" <<JSON
+{
+  "system": "VirtualEdge OS",
+  "architecture": "aarch64",
+  "timestamp": $TIMESTAMP,
+  "uptime_seconds": $UPTIME,
+  "memory_total_kb": $MEM_TOTAL,
+  "memory_available_kb": $MEM_AVAILABLE,
+  "load_average_1m": $LOAD
+}
+JSON
+
+    mv "${STATUS}.tmp" "$STATUS"
+    sleep 5
+done

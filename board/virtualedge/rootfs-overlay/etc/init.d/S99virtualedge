@@ -1,0 +1,24 @@
+#!/bin/sh
+
+PIDFILE=/run/virtualedge-monitor.pid
+
+case "$1" in
+    start)
+        echo "Starting VirtualEdge monitoring..."
+        start-stop-daemon -S -b -m -p "$PIDFILE" \
+            -x /usr/bin/virtualedge-monitor
+        ;;
+    stop)
+        echo "Stopping VirtualEdge monitoring..."
+        start-stop-daemon -K -p "$PIDFILE" \
+            -x /usr/bin/virtualedge-monitor
+        ;;
+    restart)
+        "$0" stop
+        "$0" start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac

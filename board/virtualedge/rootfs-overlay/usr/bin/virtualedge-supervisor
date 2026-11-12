@@ -1,0 +1,29 @@
+#!/bin/sh
+# Minimal process supervisor for a single embedded daemon.
+# Deliberately no network management, no privileges escalation.
+DAEMON="${VE_DAEMON:-/usr/bin/virtualedge-api}"
+CHILD=""
+STOPPING=0
+stop_supervisor() {
+    STOPPING=1
+    trap - INT TERM
+    if [ -n "$CHILD" ]; then
+        kill "$CHILD" 2>/dev/null || true
+        wait "$CHILD" 2>/dev/null || true
+    fi
+    exit 0
+}
+trap stop_supervisor INT TERM
+while [ "$STOPPING" -eq 0 ]; do
+    "$DAEMON" &
+    CHILD=$!
+    wait "$CHILD"
+    RESULT=$?
+    CHILD=""
+    echo "VirtualEdge: API exited (status $RESULT); restarting" >&2
+    # Wait in a child so signal handlers remain responsive.
+    sleep 2 &
+    CHILD=$!
+    wait "$CHILD" || true
+    CHILD=""
+done

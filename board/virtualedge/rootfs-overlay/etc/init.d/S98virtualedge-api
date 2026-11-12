@@ -1,0 +1,31 @@
+#!/bin/sh
+
+DAEMON=/usr/bin/virtualedge-supervisor
+PIDFILE=/run/virtualedge-api.pid
+
+# Optional bind-address override for QEMU host-only port forwarding.
+# Never expose the API to untrusted networks: it has no authentication.
+[ -r /etc/default/virtualedge-api ] && . /etc/default/virtualedge-api
+# VE_AUTH_FILE is explicitly enabled from /etc/default/virtualedge-api.
+# A missing or insecure file then makes the daemon fail closed.
+[ -n "${VE_AUTH_FILE:-}" ] && export VE_AUTH_FILE
+export VE_LISTEN_ANY
+
+case "$1" in
+    start)
+        echo "Starting VirtualEdge API..."
+        start-stop-daemon -S -b -m -p "$PIDFILE" -x "$DAEMON"
+        ;;
+    stop)
+        echo "Stopping VirtualEdge API..."
+        start-stop-daemon -K -p "$PIDFILE" -x "$DAEMON"
+        ;;
+    restart)
+        "$0" stop
+        "$0" start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac

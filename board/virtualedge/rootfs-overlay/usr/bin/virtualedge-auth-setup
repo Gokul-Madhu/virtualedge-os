@@ -1,0 +1,22 @@
+#!/bin/sh
+# Development-only provisioning for the local web UI.
+# The Base64 file is an equivalent of the password, not a password hash.
+set -eu
+if [ "$(id -u)" -ne 0 ]; then echo 'Run as root.' >&2; exit 1; fi
+umask 077
+secret=$(head -c 24 /dev/urandom | base64 | tr -d '\n')
+[ "${#secret}" -ge 32 ] || { echo 'Randomness unavailable' >&2; exit 1; }
+mkdir -p /etc/virtualedge
+printf 'virtualedge:%s' "$secret" | base64 | tr -d '\n' > /etc/virtualedge/http-basic.auth
+printf '\n' >> /etc/virtualedge/http-basic.auth
+chmod 600 /etc/virtualedge/http-basic.auth
+mkdir -p /etc/default
+settings=/etc/default/virtualedge-api
+[ -e "$settings" ] || : > "$settings"
+sed -i '/^VE_AUTH_FILE=/d' "$settings"
+printf 'VE_AUTH_FILE=/etc/virtualedge/http-basic.auth\n' >> "$settings"
+echo 'VirtualEdge local Basic authentication provisioned.'
+echo 'Username: virtualedge'
+printf 'Password: %s\n' "$secret"
+echo 'Save the password securely; reboot the guest to activate.'
+echo 'Use only over the host-local QEMU forward or an encrypted tunnel.'

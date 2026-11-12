@@ -1,0 +1,38 @@
+#!/bin/sh
+# Run within QEMU: read-only smoke checks; do not change fault injection.
+set -eu
+command -v wget >/dev/null
+hostname | grep -qx virtualedge
+[ -x /usr/bin/virtualedge-api ]
+[ -x /usr/bin/virtualedge-supervisor ]
+[ -r /etc/virtualedge/diagnostics.conf ]
+[ -x /usr/bin/virtualedge-config ]
+/usr/bin/virtualedge-config validate >/dev/null
+wget -q -O /tmp/ve-health.json http://127.0.0.1:8080/health
+grep -q '"status":"ok"' /tmp/ve-health.json
+wget -q -O /tmp/ve-ready.json http://127.0.0.1:8080/ready
+grep -q '"status":"ready"' /tmp/ve-ready.json
+wget -q -O /tmp/ve-metrics.json http://127.0.0.1:8080/api/v1/metrics
+grep -q '"event_transitions_total"' /tmp/ve-metrics.json
+wget -q -O /tmp/ve-telemetry.json http://127.0.0.1:8080/api/v1/telemetry
+grep -q '"source":"simulation"' /tmp/ve-telemetry.json
+wget -q -O /tmp/ve-diagnostics.json http://127.0.0.1:8080/api/v1/diagnostics
+grep -q '"fault_mask"' /tmp/ve-diagnostics.json
+wget -q -O /tmp/ve-device.json http://127.0.0.1:8080/api/v1/device
+grep -q '"control_api_enabled":false' /tmp/ve-device.json
+wget -q -O /tmp/ve-config.json http://127.0.0.1:8080/api/v1/config
+grep -q '"config_valid":true' /tmp/ve-config.json
+wget -q -O /tmp/ve-events.json http://127.0.0.1:8080/api/v1/events
+grep -q '"events":\[' /tmp/ve-events.json
+wget -q -O /tmp/ve-dashboard.html http://127.0.0.1:8080/dashboard
+grep -q 'VirtualEdge OS' /tmp/ve-dashboard.html
+if [ -r /etc/default/virtualedge-tls ]; then
+    . /etc/default/virtualedge-tls
+    if [ "${VE_TLS_ENABLE:-0}" = 1 ]; then
+        [ -x /usr/bin/virtualedge-tls ]
+        [ -r /etc/virtualedge/tls/ca.pem ]
+        [ -r /etc/virtualedge/tls/server.pem ]
+        [ -r /etc/virtualedge/tls/server.key ]
+    fi
+fi
+echo 'PASS: VirtualEdge QEMU guest service, APIs, and dashboard'

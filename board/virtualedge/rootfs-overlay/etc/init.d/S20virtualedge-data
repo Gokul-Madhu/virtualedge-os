@@ -1,0 +1,48 @@
+#!/bin/sh
+# Optional persistent QEMU data disk (/dev/vdb). No disk: retain factory behavior.
+# This does NOT implement A/B boot or OTA.
+set -u
+DATA_DEV=/dev/vdb
+DATA_MOUNT=/data
+CONFIG_TARGET=/etc/virtualedge
+LOG_TARGET=/var/log/virtualedge
+
+is_mounted() {
+    awk -v target="$1" '$2 == target { found=1 } END { exit !found }' /proc/mounts
+}
+
+case "${1:-}" in
+    start)
+        if [ ! -b "$DATA_DEV" ]; then
+            echo 'VirtualEdge: no persistent data volume; using root filesystem'
+            exit 0
+        fi
+        mkdir -p "$DATA_MOUNT" "$CONFIG_TARGET" "$LOG_TARGET"
+        if ! is_mounted "$DATA_MOUNT"; then
+            if ! mount -t ext4 -o nosuid,nodev,noexec "$DATA_DEV" "$DATA_MOUNT"; then
+                echo 'VirtualEdge: ERROR persistent volume failed to mount; not formatting it' >&2
+                exit 1
+            fi
+        fi
+        mkdir -p "$DATA_MOUNT/virtualedge/config" "$DATA_MOUNT/virtualedge/log"
+        chmod 700 "$DATA_MOUNT/virtualedge/config"
+        chmod 750 "$DATA_MOUNT/virtualedge/log"
+        if [ ! -e "$DATA_MOUNT/virtualedge/config/diagnostics.conf" ]; then
+            if [ -f "$CONFIG_TARGET/diagnostics.conf" ]; then
+                cp "$CONFIG_TARGET/diagnostics.conf" "$DATA_MOUNT/virtualedge/config/diagnostics.conf" || exit 1
+            fi
+        fi
+        chmod 600 "$DATA_MOUNT/virtualedge/config/diagnostics.conf" 2>/dev/null || true
+        if ! is_mounted "$CONFIG_TARGET"; then
+            mount --bind "$DATA_MOUNT/virtualedge/config" "$CONFIG_TARGET" || exit 1
+        fi
+        if ! is_mounted "$LOG_TARGET"; then
+            mount --bind "$DATA_MOUNT/virtualedge/log" "$LOG_TARGET" || exit 1
+        fi
+        echo 'VirtualEdge: persistent config and event-log directories mounted'
+        ;;
+    stop)
+        # Do not unmount during normal service stop: the API may be writing events.
+        ;;
+    *) echo "Usage: $0 {start|stop}" >&2; exit 2 ;;
+esac

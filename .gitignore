@@ -1,0 +1,16 @@
+/out/
+__pycache__/
+*.py[cod]
+*.log
+*.ext4
+*.ext2
+*.img
+*.vhdx
+*.pem
+*.key
+/board/virtualedge/rootfs-overlay/usr/bin/virtualedge-api
+/board/virtualedge/rootfs-overlay/usr/bin/virtualedge-config
+/board/virtualedge/rootfs-overlay/usr/bin/virtualedge-tls
+/board/virtualedge/rootfs-overlay/usr/bin/virtualedge-update-verify
+/board/virtualedge/rootfs-overlay/usr/bin/virtualedge-update-stage
+/board/virtualedge/rootfs-overlay/usr/bin/virtualedge-update-install-file

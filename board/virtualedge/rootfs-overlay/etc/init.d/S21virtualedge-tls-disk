@@ -1,0 +1,24 @@
+#!/bin/sh
+# Optional dedicated development TLS credential disk; never auto-format or copy keys to rootfs.
+set -u
+DEV=/dev/vdc
+MOUNT=/run/virtualedge-tls
+case "${1:-}" in
+    start)
+        [ -b "$DEV" ] || exit 0
+        mkdir -p "$MOUNT" || exit 1
+        chmod 700 "$MOUNT" || exit 1
+        if ! mount -t ext4 -o ro,nosuid,nodev,noexec "$DEV" "$MOUNT"; then
+            echo 'VirtualEdge TLS: could not mount credential disk; refusing TLS startup' >&2
+            exit 1
+        fi
+        [ -f "$MOUNT/ca.pem" ] && [ -f "$MOUNT/server.pem" ] && [ -f "$MOUNT/server.key" ] || {
+            echo 'VirtualEdge TLS: incomplete credential disk' >&2
+            umount "$MOUNT" || true
+            exit 1
+        }
+        echo 'VirtualEdge TLS: mounted separate read-only development credential disk'
+        ;;
+    stop) ;;
+    *) echo "Usage: $0 {start|stop}" >&2; exit 2 ;;
+esac

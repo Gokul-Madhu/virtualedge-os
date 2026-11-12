@@ -1,0 +1,3 @@
+# v0.18: native mTLS disabled by default; requires /dev/vdc TLS disk.
+VE_TLS_ENABLE=0
+VE_TLS_LISTEN_ANY=0

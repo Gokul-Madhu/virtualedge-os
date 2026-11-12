@@ -1,0 +1,31 @@
+#!/bin/sh
+# Opt-in native guest mTLS gateway; no guest certs ship in the source archive.
+PIDFILE=/run/virtualedge-tls.pid
+CA=/run/virtualedge-tls/ca.pem
+CERT=/run/virtualedge-tls/server.pem
+KEY=/run/virtualedge-tls/server.key
+[ -r /etc/default/virtualedge-tls ] && . /etc/default/virtualedge-tls
+# Explicit development-only enablement via QEMU kernel boot argument.
+# Production deployments should use a provisioned service configuration.
+if [ -r /proc/cmdline ] && grep -qE '(^| )ve_tls_dev=1( |$)' /proc/cmdline; then
+    VE_TLS_ENABLE=1
+    VE_TLS_LISTEN_ANY=1
+fi
+case "$1" in
+    start)
+        [ "${VE_TLS_ENABLE:-0}" = 1 ] || exit 0
+        [ -x /usr/bin/virtualedge-tls ] || { echo 'Missing native TLS binary' >&2;exit 1; }
+        [ -r "$CA" ] && [ -r "$CERT" ] && [ -r "$KEY" ] || { echo 'Missing native TLS certificates' >&2;exit 1; }
+        # Secure development profile fails closed without its signed CRL.
+        # Prevents accidental reinstatement of revoked client credentials.
+        VE_TLS_REQUIRE_CRL=1
+        VE_TLS_CRL_FILE=/run/virtualedge-tls/client-revocations.pem
+        [ -r "$VE_TLS_CRL_FILE" ] || { echo 'Required TLS CRL missing' >&2; exit 1; }
+        export VE_TLS_REQUIRE_CRL VE_TLS_CRL_FILE
+        export VE_TLS_LISTEN_ANY
+        start-stop-daemon -S -b -m -p "$PIDFILE" -x /usr/bin/virtualedge-tls -- "$CA" "$CERT" "$KEY"
+        ;;
+    stop) start-stop-daemon -K -p "$PIDFILE" -x /usr/bin/virtualedge-tls 2>/dev/null || true ;;
+    restart) "$0" stop; "$0" start ;;
+    *) echo "Usage: $0 {start|stop|restart}";exit 1 ;;
+esac
